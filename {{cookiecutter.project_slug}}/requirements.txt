@@ -1,0 +1,11 @@
+mypy
+cx_Freeze
+wheel
+sphinx
+{%- if cookiecutter.use_pytest == "y" %}
+pytest
+pytest-runner
+six
+appdirs
+packaging
+{%- endif %}
