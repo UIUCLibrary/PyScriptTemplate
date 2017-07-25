@@ -110,7 +110,7 @@ pipeline {
 
             steps {
                 parallel(
-                        "Windows Wheel": {
+                        "Source and Wheel formats": {
                             node(label: "Windows") {
                                 deleteDir()
                                 unstash "Source"
@@ -118,7 +118,7 @@ pipeline {
                                         call .env/Scripts/activate.bat
                                         pip install --upgrade pip setuptools
                                         pip install -r requirements.txt
-                                        python setup.py bdist_wheel --universal
+                                        python setup.py bdist_wheel sdist
                                     """
                                 archiveArtifacts artifacts: "dist/**", fingerprint: true
                             }
@@ -133,7 +133,9 @@ pipeline {
                                        python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi
                                        call .env/Scripts/deactivate.bat
                                     """
-                                bat "build\\msi\\hathizip.exe --pytest"
+                                {%- if cookiecutter.script["add_script"] == "y" and cookiecutter.use_pytest == "y" %}
+                                bat "build\\msi\\{{cookiecutter.script["cli_command_name"]}}.exe --pytest"
+                                {%- endif %}
                                 dir("dist") {
                                     stash includes: "*.msi", name: "msi"
                                 }
@@ -147,12 +149,6 @@ pipeline {
                                 archiveArtifacts artifacts: "*.msi", fingerprint: true
                             }
                         },
-                        "Source Release": {
-                            deleteDir()
-                            unstash "Source"
-                            sh "${env.PYTHON3} setup.py sdist"
-                            archiveArtifacts artifacts: "dist/**", fingerprint: true
-                        }
                 )
             }
         }
