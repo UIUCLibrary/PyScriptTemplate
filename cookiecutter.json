@@ -5,13 +5,17 @@
   "description": "",
   "version": "0.0.1",
   "url": "http://http://www.library.illinois.edu/dccdocs/{{cookiecutter.project_slug}}",
+  "maintainer": "Henry Borchers",
   "author": "University of Illinois at Urbana Champaign",
   "author_email": "hborcher@illinois.edu",
   "use_pytest": "y",
   "use_tox": "y",
   "use_sphinx": "y",
   "use_jenkins_pipeline": "y",
-  "add_script": "y",
-  "cli_command_name": "{{ cookiecutter.project_slug }}",
+  "create_deployment_yml": "y",
+  "script":{
+    "add_script": "y",
+    "cli_command_name": "{{ cookiecutter.project_slug }}"
+  },
   "_extensions": ["jinja2_time.TimeExtension"]
 }
