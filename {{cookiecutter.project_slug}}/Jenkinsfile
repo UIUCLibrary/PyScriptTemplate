@@ -5,7 +5,7 @@ pipeline {
         pytest_args = "--junitxml=reports/junit-{env:OS:UNKNOWN_OS}-{envname}.xml --junit-prefix={env:OS:UNKNOWN_OS}  --basetemp={envtmpdir}"
     }
     parameters {
-        string(name: "PROJECT_NAME", defaultValue: "HathiTrust Zip for Submit", description: "Name given to the project")
+        string(name: "PROJECT_NAME", defaultValue: "{{cookiecutter.project_name}}", description: "Name given to the project")
         {%- if cookiecutter.use_pytest == "y" %}
         booleanParam(name: "UNIT_TESTS", defaultValue: true, description: "Run automated unit tests")
         {%- endif %}
