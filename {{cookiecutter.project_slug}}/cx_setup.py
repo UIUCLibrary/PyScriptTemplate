@@ -80,10 +80,10 @@ build_exe_options = {
 
 }
 
-target_name = "{{cookiecutter.cli_command_name}}.exe" if platform.system() == "Windows" else "{{cookiecutter.cli_command_name}}"
+target_name = '{{ cookiecutter.script["cli_command_name"] }}.exe' if platform.system() == "Windows" else '{{ cookiecutter.script["cli_command_name"] }}'
 cx_Freeze.setup(
-    name={{cookiecutter.project_slug}}.FULL_TITLE,
-    description={{cookiecutter.project_slug}}.__description__,
+    name={{ cookiecutter.project_slug }}.FULL_TITLE,
+    description={{ cookiecutter.project_slug }}.__description__,
     license="University of Illinois/NCSA Open Source License",
     version={{cookiecutter.project_slug}}.__version__,
     author={{cookiecutter.project_slug}}.__author__,
@@ -100,7 +100,9 @@ cx_Freeze.setup(
 
         }
     },
+    {%- if cookiecutter.script["add_script"] == "y" %}
     executables=[cx_Freeze.Executable("{{cookiecutter.project_slug}}/__main__.py",
                             targetName=target_name, base="Console")],
+    {%- endif %}
 
 )

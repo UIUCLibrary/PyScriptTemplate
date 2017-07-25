@@ -19,10 +19,10 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
     {%- endif %}
-	{%- if cookiecutter.add_script == "y" %}
+	{%- if cookiecutter.script["add_script"] == "y" %}
     entry_points={
          "console_scripts": [
-             "{{cookiecutter.cli_command_name}} = {{cookiecutter.project_slug}}.__main__:main"
+             '{{cookiecutter.script["cli_command_name"]}} = {{cookiecutter.project_slug}}.__main__:main'
          ]
      },
 	{%- endif %}
