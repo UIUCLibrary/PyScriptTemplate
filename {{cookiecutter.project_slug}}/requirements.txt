@@ -9,3 +9,6 @@ six
 appdirs
 packaging
 {%- endif %}
+{%- if cookiecutter.use_tox == "y" %}
+tox
+{%- endif %}
