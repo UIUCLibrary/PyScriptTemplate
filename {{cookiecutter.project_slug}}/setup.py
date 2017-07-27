@@ -1,18 +1,24 @@
 from setuptools import setup
+import os
 import {{cookiecutter.project_slug}}
+
+metadata_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), '{{cookiecutter.project_slug}}', '__version__.py')
+metadata = dict()
+with open(metadata_file, 'r', encoding='utf-8') as f:
+    exec(f.read(), metadata)
 
 with open('README.rst', 'r', encoding='utf-8') as readme_file:
     readme = readme_file.read()
 
 setup(
-    name={{cookiecutter.project_slug}}.__title__,
-    version={{cookiecutter.project_slug}}.__version__,
+    name=metadata["__title__"],
+    version=metadata["__version__"],
     packages=['{{cookiecutter.project_slug}}'],
-    url={{cookiecutter.project_slug}}.__url__,
+    url=metadata["__url__"],
     license='University of Illinois/NCSA Open Source License',
-    author={{cookiecutter.project_slug}}.__author__,
-    author_email={{cookiecutter.project_slug}}.__author_email__,
-    description={{cookiecutter.project_slug}}.__description__,
+    author=metadata["__author__"],
+    author_email=metadata["__author_email__"],
+    description=metadata["__description__"],
     long_description=readme,
     test_suite="tests",
     {%- if cookiecutter.use_pytest == "y" %}
