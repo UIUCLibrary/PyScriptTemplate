@@ -1,0 +1,13 @@
+language: python
+python:
+  - "3.6"
+install:
+  - pip install tox
+  - python setup.py install
+script:
+  {%- if cookiecutter.use_tox == "y" %}
+  - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)
+  {%- endif %}
+  {%- if cookiecutter.script["add_script"] == "y" and cookiecutter.use_pytest == "y" %}
+  - {{cookiecutter.script}} --pytest
+  {%- endif %}
