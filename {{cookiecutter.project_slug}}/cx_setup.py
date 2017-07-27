@@ -5,7 +5,10 @@ import pytest
 import {{cookiecutter.project_slug}}
 import platform
 
-
+metadata_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), '{{cookiecutter.project_slug}}', '__version__.py')
+metadata = dict()
+with open(metadata_file, 'r', encoding='utf-8') as f:
+    exec(f.read(), metadata)
 
 def create_msi_tablename(python_name, fullname):
     shortname = python_name[:6].replace("_", "").upper()
@@ -39,14 +42,14 @@ directory_table = [
     (
         "PMenu",  # Directory
         "ProgramMenuFolder",  # Directory_parent
-        create_msi_tablename({{cookiecutter.project_slug}}.__title__, {{cookiecutter.project_slug}}.FULL_TITLE)
+        create_msi_tablename(metadata["__title__"], metadata["FULL_TITLE"])
     ),
 ]
 shortcut_table = [
     (
         "startmenuShortcutDoc",  # Shortcut
         "PMenu",  # Directory_
-        "{} Documentation".format(create_msi_tablename({{cookiecutter.project_slug}}.__title__, {{cookiecutter.project_slug}}.FULL_TITLE)),
+        "{} Documentation".format(create_msi_tablename(metadata["__title__"], metadata["FULL_TITLE"])),
         "TARGETDIR",  # Component_
         "[TARGETDIR]documentation.url",  # Target
         None,  # Arguments
@@ -82,12 +85,12 @@ build_exe_options = {
 
 target_name = '{{ cookiecutter.script["cli_command_name"] }}.exe' if platform.system() == "Windows" else '{{ cookiecutter.script["cli_command_name"] }}'
 cx_Freeze.setup(
-    name={{ cookiecutter.project_slug }}.FULL_TITLE,
-    description={{ cookiecutter.project_slug }}.__description__,
+    name=metadata["FULL_TITLE"],
+    description=metadata["__description__"],
     license="University of Illinois/NCSA Open Source License",
-    version={{cookiecutter.project_slug}}.__version__,
-    author={{cookiecutter.project_slug}}.__author__,
-    author_email={{cookiecutter.project_slug}}.__author_email__,
+    version=metadata["__version__"],
+    author=metadata["__author__"],
+    author_email=metadata["__author_email__"],
     options={
         "build_exe": build_exe_options,
         "bdist_msi": {
