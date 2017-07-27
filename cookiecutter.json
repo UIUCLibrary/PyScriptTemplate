@@ -11,6 +11,7 @@
   "use_pytest": "y",
   "use_tox": "y",
   "use_sphinx": "y",
+  "use_travis_ci": "y",
   "use_jenkins_pipeline": "y",
   "create_deployment_yml": "y",
   "script":{
