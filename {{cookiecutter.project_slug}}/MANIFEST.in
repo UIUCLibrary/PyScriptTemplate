@@ -1,0 +1,12 @@
+# Include the license file
+{%- if cookiecutter.use_tox == "y" %}
+include LICENSE tox.ini README.rst
+{% else %}
+include LICENSE README.rst
+{%- endif %}
+{%- if cookiecutter.use_pytest == "y" %}
+recursive-include tests *
+{%- endif %}
+{%- if cookiecutter.use_sphinx == "y" %}
+recursive-include docs *
+{%- endif %}
