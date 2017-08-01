@@ -5,3 +5,5 @@ __author__ = '{{cookiecutter.author}}'
 __author_email__ = '{{cookiecutter.author_email}}'
 __description__ = "{{cookiecutter.description}}"
 FULL_TITLE = "{{cookiecutter.project_name}}"
+MAINTAINER = '{{cookiecutter.maintainer}}'
+MAINTAINER_EMAIL =  '{{cookiecutter.maintainer_email}}'

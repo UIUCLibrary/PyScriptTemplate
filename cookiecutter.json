@@ -6,6 +6,7 @@
   "version": "0.0.1",
   "url": "http://http://www.library.illinois.edu/dccdocs/{{cookiecutter.project_slug}}",
   "maintainer": "Henry Borchers",
+  "maintainer_email": "hborcher@illinois.edu",
   "author": "University of Illinois at Urbana Champaign",
   "author_email": "hborcher@illinois.edu",
   "use_pytest": "y",
