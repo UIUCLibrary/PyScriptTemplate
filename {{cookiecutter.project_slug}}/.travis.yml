@@ -9,5 +9,5 @@ script:
   - tox -e $(echo py$TRAVIS_PYTHON_VERSION | tr -d .)
   {%- endif %}
   {%- if cookiecutter.script["add_script"] == "y" and cookiecutter.use_pytest == "y" %}
-  - {{cookiecutter.script}} --pytest
+  - {{cookiecutter.script["cli_command_name"]}} --pytest
   {%- endif %}
