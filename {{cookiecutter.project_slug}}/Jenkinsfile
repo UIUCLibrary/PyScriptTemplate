@@ -104,16 +104,6 @@ pipeline {
                         }
                 )
             }
-            {%- if cookiecutter.use_sphinx == "y" %}
-            post {
-              success {
-                deleteDir()
-                unstash "HTML Documentation"
-                sh 'tar -czvf sphinx_html_docs.tar.gz -C html .'
-                archiveArtifacts artifacts: 'sphinx_html_docs.tar.gz'
-              }
-            }
-            {%- endif %}
         }
 
         stage("Packaging") {
