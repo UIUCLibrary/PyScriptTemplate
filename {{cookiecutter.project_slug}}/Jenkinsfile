@@ -34,6 +34,8 @@ pipeline {
             }
 
         }
+        {%- if cookiecutter.use_tox == "y" %}
+
         {%- if cookiecutter.use_pytest == "y" %}
         stage("Unit tests") {
             when {
@@ -70,7 +72,7 @@ pipeline {
             }
             {%- endif %}
         }
-
+        {%- endif %}
         stage("Packaging") {
             when {
                 expression { params.PACKAGE == true }
