@@ -16,7 +16,7 @@ def remove_dir(dirpath):
 
 def build_gui():
     print("writing gui file")
-    with open("upgrade_guid", "w") as f:
+    with open("UPGRADE_GUID", "w") as f:
         f.write("{}\n".format(str(uuid.uuid1()).upper()))
 
 
