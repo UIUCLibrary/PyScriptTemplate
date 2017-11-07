@@ -1,13 +1,9 @@
 mypy
-cx_Freeze
 wheel
 sphinx
 {%- if cookiecutter.use_pytest == "y" %}
 pytest
 pytest-runner
-six
-appdirs
-packaging
 {%- endif %}
 {%- if cookiecutter.use_tox == "y" %}
 tox
