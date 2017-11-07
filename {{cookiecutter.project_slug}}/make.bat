@@ -33,16 +33,16 @@ EXIT /B 0
     echo    make venv               Creates a virtualenv with development requirements
     echo    make venvclean          Removes the generated virtualenv
     echo    make build              Creates a build in the build directory
-    {%- if cookiecutter.use_sphinx == "y" %}
+{%- if cookiecutter.use_sphinx == "y" %}
     echo    make docs               Generates html documentation into the docs/build/html directory
-    {$- endif %}
+{%- endif %}
     echo    make test               Runs tests
     echo    make test-mypy          Runs MyPy tests
     echo    make wheel                   Build a Python built distribution wheel
     echo    make sdist                   Build a Python source distribution
-    {%- if cookiecutter.use_cx_freeze == "y" %}
+{%- if cookiecutter.use_cx_freeze == "y" %}
     echo    make freeze                   Build a standalone distribution with CX_Freeze
-    {%- endif %}
+{%- endif %}
 ::    echo     make release           Creates a Windows Release build
     echo     make clean             Removes generated files
 goto :eof
@@ -188,10 +188,10 @@ goto :eof
 	echo Calling setup.py clean
 	python setup.py clean --all --quiet
 
-    {%- if cookiecutter.use_sphinx == "y" %}
+{%- if cookiecutter.use_sphinx == "y" %}
 	echo Cleaning docs
 	call docs\make.bat clean
-	{%- endif %}
+{%- endif %}
 
 	if exist .cache rd /q /s .cache                 && echo Removed .cache
 	if exist .reports rd /q /s .reports             && echo Removed .reports
