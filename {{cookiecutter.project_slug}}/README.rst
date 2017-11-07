@@ -1,5 +1,6 @@
-======
-README
-======
+About
+=====
 
-This it the readme for {{cookiecutter.project_name}}.
+{{cookiecutter.project_name}}
+
+{{cookiecutter.description}}
