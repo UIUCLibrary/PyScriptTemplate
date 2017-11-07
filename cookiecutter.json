@@ -15,11 +15,12 @@
   "use_travis_ci": "y",
   "use_jenkins_pipeline": "y",
   "create_deployment_yml": "y",
-  "script":{
+  "script": {
     "add_script": "y",
-    "cli_command_name": "{{ cookiecutter.project_slug }}"
-
+    "cli_command_name": "{{cookiecutter.project_slug}}"
   },
-  "use_cx_freeze": "{{ cookiecutter.script.add_script }}",
-  "_extensions": ["jinja2_time.TimeExtension"]
+  "use_cx_freeze":"n",
+  "_extensions": [
+    "jinja2_time.TimeExtension"
+  ]
 }
