@@ -18,7 +18,9 @@ def create_msi_tablename(python_name, fullname):
 
 PYTHON_INSTALL_DIR = os.path.dirname(os.path.dirname(os.__file__))
 MSVC = os.path.join(PYTHON_INSTALL_DIR, 'vcruntime140.dll')
-
+def get_upgrade_guid():
+    with open("UPGRADE_GUID", "r") as f:
+        return f.read()
 
 def get_tests():
     root = "tests"
@@ -95,7 +97,7 @@ cx_Freeze.setup(
         "build_exe": build_exe_options,
         "bdist_msi": {
 			# TODO: Fill in upgrade_code. example: {D8846842-2CF4-4F9A-8A2A-FFAFD8A5E10B}
-            # "upgrade_code": "",
+            "upgrade_code": get_upgrade_guid(),
             "data": {
                 "Shortcut": shortcut_table,
                 "Directory": directory_table
