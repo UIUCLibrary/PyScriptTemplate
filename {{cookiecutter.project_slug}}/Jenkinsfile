@@ -102,6 +102,7 @@ pipeline {
                                 archiveArtifacts artifacts: "dist/**", fingerprint: true
                             }
                         },
+                        {%- if cookiecutter.use_cx_freeze == "y" %}
                         "Windows CX_Freeze MSI": {
                             node(label: "Windows") {
                                 deleteDir()
@@ -128,6 +129,19 @@ pipeline {
 
                             }
                         },
+                        {%- endif %}
+                        {%- if cookiecutter.create_standalone == "y" %}
+                        "Windows Standalone": {
+                            node(label: "Windows&&VS2015&&DevPi") {
+                                deleteDir()
+                                unstash "Source"
+                                bat "call make.bat standalone"
+                                dir("dist") {
+                                    stash includes: "*.msi", name: "msi"
+                                }
+                            }
+                        }, 
+                        {%- endif %}
                 )
             }
             post {
