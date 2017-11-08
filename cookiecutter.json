@@ -15,9 +15,13 @@
   "use_travis_ci": "y",
   "use_jenkins_pipeline": "y",
   "create_deployment_yml": "y",
-  "script":{
+  "script": {
     "add_script": "y",
-    "cli_command_name": "{{ cookiecutter.project_slug }}"
+    "cli_command_name": "{{cookiecutter.project_slug}}"
   },
-  "_extensions": ["jinja2_time.TimeExtension"]
+  "use_cx_freeze":"n",
+  "create_standalone": "n",
+  "_extensions": [
+    "jinja2_time.TimeExtension"
+  ]
 }
