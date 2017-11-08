@@ -1,4 +1,5 @@
 mypy
+lxml
 wheel
 sphinx
 {%- if cookiecutter.use_pytest == "y" %}
