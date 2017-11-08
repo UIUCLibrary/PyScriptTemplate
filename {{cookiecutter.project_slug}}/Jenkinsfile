@@ -1,3 +1,7 @@
+#!groovy
+@Library("ds-utils@v0.2.0") // Uses library from https://github.com/UIUCLibrary/Jenkins_utils
+import org.ds.*
+
 pipeline {
     agent {
         label "Windows&&DevPi"
@@ -13,7 +17,8 @@ pipeline {
         {%- endif %}
         booleanParam(name: "ADDITIONAL_TESTS", defaultValue: true, description: "Run additional tests")
         booleanParam(name: "PACKAGE", defaultValue: true, description: "Create a package")
-        booleanParam(name: "DEPLOY", defaultValue: false, description: "Create SCCM deployment package")
+        booleanParam(name: "DEPLOY_DEVPI", defaultValue: true, description: "Deploy to devpi on http://devpy.library.illinois.edu/DS_Jenkins/${env.BRANCH_NAME}")
+        choice(choices: 'None\nRelease_to_devpi_only\nRelease_to_devpi_and_sccm\n', description: "Release the build to production. Only available in the Master branch", name: 'RELEASE')
         {%- if cookiecutter.use_sphinx == "y" %}
         booleanParam(name: "UPDATE_DOCS", defaultValue: false, description: "Update online documentation")
         string(name: 'URL_SUBFOLDER', defaultValue: "{{cookiecutter.project_slug}}", description: 'The directory that the docs should be saved under')
@@ -22,6 +27,8 @@ pipeline {
     stages {
 
         stage("Cloning Source") {
+            agent any
+
             steps {
                 deleteDir()
                 checkout scm
@@ -30,6 +37,8 @@ pipeline {
             }
 
         }
+        {%- if cookiecutter.use_tox == "y" %}
+
         {%- if cookiecutter.use_pytest == "y" %}
         stage("Unit tests") {
             when {
@@ -56,6 +65,8 @@ pipeline {
                             bat "${tool 'Python3.6.3_Win64'} -m tox -e mypy"
                             junit 'mypy.xml'
                           }
+
+                        }
                 )
             }
             {%- if cookiecutter.use_sphinx == "y" %}
@@ -66,7 +77,7 @@ pipeline {
             }
             {%- endif %}
         }
-
+        {%- endif %}
         stage("Packaging") {
             when {
                 expression { params.PACKAGE == true }
@@ -80,6 +91,8 @@ pipeline {
                                     pip install -r requirements-dev.txt
                                     python setup.py sdist bdist_wheel
                                     """
+                                archiveArtifacts artifacts: "dist/**", fingerprint: true
+                            }
                         },
                         "Windows CX_Freeze MSI": {
                             node(label: "Windows") {
@@ -202,6 +215,7 @@ pipeline {
             when {
                 expression { params.RELEASE != "None" && env.BRANCH_NAME == "master" }
             }
+
             steps {
                 script {
                     def name = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --name").trim()
@@ -232,7 +246,6 @@ pipeline {
                     deployStash("msi", "${env.SCCM_UPLOAD_FOLDER}")
                 }
 
-            }
             post {
                 success {
                     script{
@@ -252,10 +265,13 @@ pipeline {
             when {
               expression {params.UPDATE_DOCS == true }
             }
+
             steps {
                 updateOnlineDocs url_subdomain: params.URL_SUBFOLDER, stash_name: "HTML Documentation"
             }
 
+                }
+            }
         }
         {%- endif %}
     }

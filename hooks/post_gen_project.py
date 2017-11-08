@@ -1,7 +1,5 @@
 import os
 import shutil
-import uuid
-from cookiecutter.main import cookiecutter
 
 PROJECT_DIRECTORY = os.path.realpath(os.path.curdir)
 
