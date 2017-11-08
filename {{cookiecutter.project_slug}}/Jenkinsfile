@@ -56,14 +56,24 @@ pipeline {
                 parallel(
                         {%- if cookiecutter.use_sphinx == "y" %}
                         "Documentation": {
-                          bat "${tool 'Python3.6.3_Win64'} -m tox -e docs"
+                            node(label: "Windows") {
+                                checkout scm
+                                bat "${tool 'Python3.6.3_Win64'} -m tox -e docs"
+                                dir('.tox/dist') {
+                                    zip archive: true, dir: 'html', glob: '', zipFile: 'sphinx_html_docs.zip'
+                                    dir("html"){
+                                        stash includes: '**', name: "HTML Documentation"
+                                    }
+                                }
+                            }
                         },
                         {%- endif %}
                         "MyPy": {
-                            bat "${tool 'Python3.6.3_Win64'} -m tox -e mypy"
-                            junit 'mypy.xml'
-                          }
-
+                            node(label: "Windows") {
+                                checkout scm
+                                bat "make test-mypy --html-report reports/mypy_report --junit-xml reports/mypy.xml"
+                                junit 'reports/mypy.xml'
+                            }
                         }
                 )
             }
