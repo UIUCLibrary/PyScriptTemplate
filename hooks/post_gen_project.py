@@ -74,6 +74,8 @@ if __name__ == "__main__":
 
     if "{{cookiecutter.use_cx_freeze}}".lower() == "y":
         build_guid()
+    else:
+        remove_file("cx_setup.py")
 
     if "{{ cookiecutter.create_standalone }}".lower() == "y":
         build_standalone()
