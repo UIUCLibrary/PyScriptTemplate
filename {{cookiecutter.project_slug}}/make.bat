@@ -188,7 +188,7 @@ goto :eof
 :mypy
     call:install-dev
     setlocal
-    call venv\Scripts\activate.bat && mypy -p imgvalidator %*
+    call venv\Scripts\activate.bat && mypy -p {{ cookiecutter.project_slug }} %*
     endlocal
 goto :eof
 
