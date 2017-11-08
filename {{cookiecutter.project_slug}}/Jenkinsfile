@@ -1,5 +1,3 @@
-@Library("ds-utils")
-import org.ds.*
 pipeline {
     agent any
     environment {
@@ -38,27 +36,7 @@ pipeline {
                 expression { params.UNIT_TESTS == true }
             }
             steps {
-                parallel(
-                        "Windows": {
-                            node(label: 'Windows') {
-                                deleteDir()
-                                unstash "Source"
-                                bat "${env.TOX}  -e pytest"
-                                junit 'reports/junit-*.xml'
-
-                            }
-                        },
-                        "Linux": {
-                            node(label: "!Windows") {
-                                deleteDir()
-                                unstash "Source"
-                                withEnv(["PATH=${env.PYTHON3}/..:${env.PATH}"]) {
-                                    sh "${env.TOX}  -e pytest"
-                                }
-                                junit 'reports/junit-*.xml'
-                            }
-                        }
-                )
+                bat "${tool 'Python3.6.3_Win64'} -m tox"
             }
         }
         {%- endif %}
@@ -71,39 +49,22 @@ pipeline {
                 parallel(
                         {%- if cookiecutter.use_sphinx == "y" %}
                         "Documentation": {
-                            script {
-                                def runner = new Tox(this)
-                                runner.env = "docs"
-                                runner.windows = false
-                                runner.stash = "Source"
-                                runner.label = "!Windows"
-                                runner.post = {
-                                    dir('.tox/dist/html/') {
-                                        stash includes: '**', name: "HTML Documentation", useDefaultExcludes: false
-                                    }
-                                }
-                                runner.run()
-
-                            }
+                          bat "${tool 'Python3.6.3_Win64'} -m tox -e docs"
                         },
                         {%- endif %}
                         "MyPy": {
-                            script {
-                                def runner = new Tox(this)
-                                runner.env = "mypy"
-                                runner.windows = false
-                                runner.stash = "Source"
-                                runner.label = "!Windows"
-                                runner.post = {
-                                    junit 'mypy.xml'
-                                }
-                                runner.run()
-
-                            }
-
-                        }
+                            bat "${tool 'Python3.6.3_Win64'} -m tox -e mypy"
+                            junit 'mypy.xml'
+                          }
                 )
             }
+            {%- if cookiecutter.use_sphinx == "y" %}
+            post {
+              success {
+                  zip archive: true, dir: 'html', glob: '', zipFile: 'sphinx_html_docs.zip'
+              }
+            }
+            {%- endif %}
         }
 
         stage("Packaging") {
@@ -114,27 +75,21 @@ pipeline {
             steps {
                 parallel(
                         "Source and Wheel formats": {
-                            node(label: "Windows") {
-                                deleteDir()
-                                unstash "Source"
-                                bat """${env.PYTHON3} -m venv .env
-                                        call .env/Scripts/activate.bat
-                                        pip install --upgrade pip setuptools
-                                        pip install -r requirements.txt
-                                        python setup.py bdist_wheel sdist
+                            bat """${tool 'Python3.6.3_Win64'} -m venv venv
+                                    call venv\\Scripts\\activate.bat
+                                    pip install -r requirements-dev.txt
+                                    python setup.py sdist bdist_wheel
                                     """
-                                archiveArtifacts artifacts: "dist/**", fingerprint: true
-                            }
                         },
                         "Windows CX_Freeze MSI": {
                             node(label: "Windows") {
                                 deleteDir()
-                                unstash "Source"
-                                bat """${env.PYTHON3} -m venv .env
-                                       call .env/Scripts/activate.bat
+                                checkout scm
+                                bat """${tool 'Python3.6.3_Win64'} -m venv venv
+                                       call venv/Scripts/activate.bat
                                        pip install -r requirements.txt
                                        python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi
-                                       call .env/Scripts/deactivate.bat
+                                       call venv/Scripts/deactivate.bat
                                     """
                                 {%- if cookiecutter.script["add_script"] == "y" and cookiecutter.use_pytest == "y" %}
                                 bat "build\\msi\\{{cookiecutter.script["cli_command_name"]}}.exe --pytest"
@@ -149,39 +104,138 @@ pipeline {
                                 git url: 'https://github.com/UIUCLibrary/ValidateMSI.git'
                                 unstash "msi"
                                 bat "call validate.bat -i"
-                                archiveArtifacts artifacts: "*.msi", fingerprint: true
+
                             }
                         },
                 )
             }
+            post {
+              success {
+                  dir("dist"){
+                      unstash "msi"
+                      archiveArtifacts artifacts: "*.whl", fingerprint: true
+                      archiveArtifacts artifacts: "*.tar.gz", fingerprint: true
+                      archiveArtifacts artifacts: "*.msi", fingerprint: true
+                }
+              }
+            }
+
         }
 
-        stage("Deploy - Staging") {
-            agent any
+        stage("Deploying to Devpi") {
             when {
-                expression { params.DEPLOY == true && params.PACKAGE == true }
+                expression { params.DEPLOY_DEVPI == true }
+            }
+            steps {
+                bat "${tool 'Python3.6.3_Win64'} -m devpi use http://devpy.library.illinois.edu"
+                withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                    bat "${tool 'Python3.6.3_Win64'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                    bat "${tool 'Python3.6.3_Win64'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+                    script {
+                        bat "${tool 'Python3.6.3_Win64'} -m devpi upload --from-dir dist"
+                        try {
+                            bat "${tool 'Python3.6.3_Win64'} -m devpi upload --only-docs"
+                        } catch (exc) {
+                            echo "Unable to upload to devpi with docs."
+                        }
+                    }
+                }
+
+            }
+        }
+        stage("Test Devpi packages") {
+            when {
+                expression { params.DEPLOY_DEVPI == true }
+            }
+            steps {
+                parallel(
+                        "Source": {
+                            script {
+                                def name = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --name").trim()
+                                def version = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --version").trim()
+                                node("Windows") {
+                                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                                        bat "${tool 'Python3.6.3_Win64'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                                        bat "${tool 'Python3.6.3_Win64'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+                                        echo "Testing Source package in devpi"
+                                        bat "${tool 'Python3.6.3_Win64'} -m devpi test --index http://devpy.library.illinois.edu/${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging ${name} -s tar.gz"
+                                    }
+                                }
+
+                            }
+                        },
+                        "Wheel": {
+                            script {
+                                def name = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --name").trim()
+                                def version = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --version").trim()
+                                node("Windows") {
+                                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                                        bat "${tool 'Python3.6.3_Win64'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                                        bat "${tool 'Python3.6.3_Win64'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+                                        echo "Testing Whl package in devpi"
+                                        bat " ${tool 'Python3.6.3_Win64'} -m devpi test --index http://devpy.library.illinois.edu/${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging ${name} -s whl"
+                                    }
+                                }
+
+                            }
+                        }
+                )
+
+            }
+            post {
+                success {
+                    echo "it Worked. Pushing file to ${env.BRANCH_NAME} index"
+                    script {
+                        def name = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --name").trim()
+                        def version = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --version").trim()
+                        withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                            bat "${tool 'Python3.6.3_Win64'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                            bat "${tool 'Python3.6.3_Win64'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+                            bat "${tool 'Python3.6.3_Win64'} -m devpi push ${name}==${version} ${DEVPI_USERNAME}/${env.BRANCH_NAME}"
+                        }
+
+                    }
+                }
+            }
+        }
+        stage("Release to DevPi production") {
+            when {
+                expression { params.RELEASE != "None" && env.BRANCH_NAME == "master" }
+            }
+            steps {
+                script {
+                    def name = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --name").trim()
+                    def version = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --version").trim()
+                    withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
+                        bat "${tool 'Python3.6.3_Win64'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
+                        bat "${tool 'Python3.6.3_Win64'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
+                        bat "${tool 'Python3.6.3_Win64'} -m devpi push ${name}==${version} production/${params.RELEASE}"
+                    }
+
+                }
+                node("Linux"){
+                    updateOnlineDocs url_subdomain: params.URL_SUBFOLDER, stash_name: "HTML Documentation"
+                }
+            }
+        }
+
+        stage("Deploy to SCCM") {
+            when {
+                expression { params.RELEASE == "Release_to_devpi_and_sccm"}
             }
 
             steps {
-                deployStash("msi", "${env.SCCM_STAGING_FOLDER}/${params.PROJECT_NAME}/")
-                input("Deploy to production?")
-            }
-        }
+                node("Linux"){
+                    unstash "msi"
+                    deployStash("msi", "${env.SCCM_STAGING_FOLDER}/${params.PROJECT_NAME}/")
+                    input("Deploy to production?")
+                    deployStash("msi", "${env.SCCM_UPLOAD_FOLDER}")
+                }
 
-        stage("Deploy - SCCM upload") {
-            agent any
-            when {
-                expression { params.DEPLOY == true && params.PACKAGE == true }
             }
-
-            steps {
-                deployStash("msi", "${env.SCCM_UPLOAD_FOLDER}")
-            }
-
             post {
                 success {
                     script{
-                        unstash "Source"
                         def  deployment_request = requestDeploy this, "deployment.yml"
                         echo deployment_request
                         writeFile file: "deployment_request.txt", text: deployment_request
@@ -192,18 +246,16 @@ pipeline {
         }
         {%- if cookiecutter.use_sphinx == "y" %}
         stage("Update online documentation") {
-            agent any
+            agent {
+                label "Linux"
+            }
             when {
               expression {params.UPDATE_DOCS == true }
             }
-
             steps {
-                deleteDir()
-                script {
-                    updateOnlineDocs url_subdomain: params.URL_SUBFOLDER, stash_name: "HTML Documentation"
-
-                }
+                updateOnlineDocs url_subdomain: params.URL_SUBFOLDER, stash_name: "HTML Documentation"
             }
+
         }
         {%- endif %}
     }
