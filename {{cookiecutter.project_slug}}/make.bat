@@ -212,12 +212,18 @@ goto :eof
     setlocal
 	call venv\Scripts\activate.bat
 
+{%- if cookiecutter.use_cx_freeze == "y" %}
 	echo Calling cx_setup.py clean
 	python cx_setup.py clean --all --quiet
 
+{%- endif %}
 	echo Calling setup.py clean
 	python setup.py clean --all --quiet
 
+{%- if cookiecutter.create_standalone== "y" %}
+    call windows_build/clean_release.bat
+
+{%- endif %}
 {%- if cookiecutter.use_sphinx == "y" %}
 	echo Cleaning docs
 	call docs\make.bat clean
