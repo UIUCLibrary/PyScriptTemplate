@@ -1,14 +1,40 @@
-# Include the license file
-include LICENSE README.rst requirements-dev.txt mypy.ini Makefile
+# License file
+include LICENSE
+
+# README and the files it references
+include README.rst
+include ABOUT.rst
+include CHANGELOG.rst
+
+# Running requirements
+include requirements.txt
+
+# Development requirements
+include requirements-dev.txt
+
+# Mypy settings
+include mypy.ini
+
+# Build scripts
+include Makefile
+include make.bat
+
 {%- if cookiecutter.use_tox == "y" %}
+
+# Tox configuration setting
 include tox.ini
 {%- endif %}
-recursive-include {{cookiecutter.project_slug}} *.py
-recursive-exclude * __pycache__
 {%- if cookiecutter.use_pytest == "y" %}
+
+# Pytest configuration setting
 include pytest.ini
 recursive-include tests *.py
 {%- endif %}
 {%- if cookiecutter.use_sphinx == "y" %}
-recursive-include docs *
+
+# Documentation
+include docs/Makefile
+include docs/make.bat
+recursive-include docs/source *
+prune docs/build
 {%- endif %}
