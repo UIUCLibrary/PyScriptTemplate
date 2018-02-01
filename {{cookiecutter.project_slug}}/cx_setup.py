@@ -1,14 +1,15 @@
 import os
 import sys
+from setuptools.config import read_configuration
 import cx_Freeze
 import pytest
-import {{cookiecutter.project_slug}}
 import platform
 
-metadata_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), '{{cookiecutter.project_slug}}', '__version__.py')
-metadata = dict()
-with open(metadata_file, 'r', encoding='utf-8') as f:
-    exec(f.read(), metadata)
+# Read metadata from the setup.cfg
+def get_project_metadata():
+    path = os.path.abspath(os.path.join(os.path.dirname(__file__), "setup.cfg"))
+    return read_configuration(path)["metadata"]
+metadata = get_project_metadata()
 
 def create_msi_tablename(python_name, fullname):
     shortname = python_name[:6].replace("_", "").upper()
@@ -33,6 +34,7 @@ def get_tests():
 
 INCLUDE_FILES = [
     "documentation.url",
+    "setup.cfg"
 ] + get_tests()
 
 directory_table = [
@@ -44,14 +46,14 @@ directory_table = [
     (
         "PMenu",  # Directory
         "ProgramMenuFolder",  # Directory_parent
-        create_msi_tablename(metadata["__title__"], metadata["FULL_TITLE"])
+        "{} Documentation".format(create_msi_tablename(metadata['name'], '{{cookiecutter.project_name}}')),
     ),
 ]
 shortcut_table = [
     (
         "startmenuShortcutDoc",  # Shortcut
         "PMenu",  # Directory_
-        "{} Documentation".format(create_msi_tablename(metadata["__title__"], metadata["FULL_TITLE"])),
+        "{} Documentation".format(create_msi_tablename(metadata['name'], '{{cookiecutter.project_name}}')),
         "TARGETDIR",  # Component_
         "[TARGETDIR]documentation.url",  # Target
         None,  # Arguments
@@ -87,12 +89,12 @@ build_exe_options = {
 
 target_name = '{{ cookiecutter.script["cli_command_name"] }}.exe' if platform.system() == "Windows" else '{{ cookiecutter.script["cli_command_name"] }}'
 cx_Freeze.setup(
-    name=metadata["FULL_TITLE"],
-    description=metadata["__description__"],
-    license="University of Illinois/NCSA Open Source License",
-    version=metadata["__version__"],
-    author=metadata["__author__"],
-    author_email=metadata["__author_email__"],
+    name='{{cookiecutter.project_name}}',
+    description=metadata['description'],
+    version=metadata['version'],
+    license=metadata['license'],
+    author=metadata['author'],
+    author_email=metadata['author_email'],
     options={
         "build_exe": build_exe_options,
         "bdist_msi": {
