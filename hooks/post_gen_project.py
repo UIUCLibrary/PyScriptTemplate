@@ -60,7 +60,7 @@ if __name__ == "__main__":
         remove_dir("docs")
 
     if '{{ cookiecutter.use_travis_ci}}' != "y":
-        remove_file(".travis")
+        remove_file(".travis.yml")
 
     if '{{ cookiecutter.use_jenkins_pipeline}}' != "y":
         remove_file("Jenkinsfile")
