@@ -1,6 +1,6 @@
-About
-=====
+======
+Readme
+======
 
-{{cookiecutter.project_name}}
-
-{{cookiecutter.description}}
+.. include:: about.rst
+.. include:: CHANGELOG.rst
