@@ -6,10 +6,6 @@ pipeline {
     agent {
         label "Windows&&DevPi"
     }
-    environment {
-        mypy_args = "--junit-xml=mypy.xml"
-        pytest_args = "--junitxml=reports/junit-{env:OS:UNKNOWN_OS}-{envname}.xml --junit-prefix={env:OS:UNKNOWN_OS}  --basetemp={envtmpdir}"
-    }
     parameters {
         string(name: "PROJECT_NAME", defaultValue: "{{cookiecutter.project_name}}", description: "Name given to the project")
         {%- if cookiecutter.use_pytest == "y" %}
@@ -43,7 +39,12 @@ pipeline {
                 expression { params.UNIT_TESTS == true }
             }
             steps {
-                bat "${tool 'Python3.6.3_Win64'} -m tox"
+                node(label: "Windows") {
+                            checkout scm
+                            bat "${tool 'Python3.6.3_Win64'} -m tox -e pytest -- --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=MedusaPackager" //  --basetemp={envtmpdir}" 
+                            junit "reports/junit-${env.NODE_NAME}-pytest.xml"
+                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/coverage', reportFiles: 'index.html', reportName: 'Coverage', reportTitles: ''])
+                         }
             }
         }
         {%- endif %}
@@ -65,16 +66,21 @@ pipeline {
                                         stash includes: '**', name: "HTML Documentation"
                                     }
                                 }
+                                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: '.tox/dist/html', reportFiles: 'index.html', reportName: 'Documentation', reportTitles: ''])
                             }
                         },
                         {%- endif %}
                         "MyPy": {
-                            node(label: "Windows") {
-                                checkout scm
-                                bat "make test-mypy --html-report reports/mypy_report --junit-xml reports/mypy.xml"
-                                junit 'reports/mypy.xml'
-                            }
-                        }
+                     
+                        node(label: "Windows") {
+                            checkout scm
+                            bat "call make.bat install-dev"
+                            bat "venv\\Scripts\\mypy.exe -p MedusaPackager --junit-xml=junit-${env.NODE_NAME}-mypy.xml --html-report reports/mypy_html"
+                            // bat "${tool 'Python3.6.3_Win64'} -m mypy -p MedusaPackager --junit-xml=junit-${env.NODE_NAME}-mypy.xml --html-report reports/mypy_html"
+                            junit "junit-${env.NODE_NAME}-mypy.xml"
+                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
+                         }
+                    },
                 )
             }
             {%- if cookiecutter.use_sphinx == "y" %}
@@ -94,30 +100,18 @@ pipeline {
             steps {
                 parallel(
                         "Source and Wheel formats": {
-                            bat """${tool 'Python3.6.3_Win64'} -m venv venv
-                                    call venv\\Scripts\\activate.bat
-                                    pip install -r requirements-dev.txt
-                                    python setup.py sdist bdist_wheel
-                                    """
-                                archiveArtifacts artifacts: "dist/**", fingerprint: true
-                            }
+                            bat "call make.bat"
                         },
                         {%- if cookiecutter.use_cx_freeze == "y" %}
                         "Windows CX_Freeze MSI": {
                             node(label: "Windows") {
                                 deleteDir()
                                 checkout scm
-                                bat """${tool 'Python3.6.3_Win64'} -m venv venv
-                                       call venv/Scripts/activate.bat
-                                       pip install -r requirements.txt
-                                       python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi
-                                       call venv/Scripts/deactivate.bat
-                                    """
-                                {%- if cookiecutter.script["add_script"] == "y" and cookiecutter.use_pytest == "y" %}
-                                bat "build\\msi\\{{cookiecutter.script["cli_command_name"]}}.exe --pytest"
-                                {%- endif %}
+                                bat "${tool 'Python3.6.3_Win64'} -m venv venv"
+                                bat "make freeze"
                                 dir("dist") {
                                     stash includes: "*.msi", name: "msi"
+                                    archiveArtifacts artifacts: "*.msi", fingerprint: true
                                 }
 
                             }
@@ -126,7 +120,7 @@ pipeline {
                                 git url: 'https://github.com/UIUCLibrary/ValidateMSI.git'
                                 unstash "msi"
                                 bat "call validate.bat -i"
-
+                                
                             }
                         },
                         {%- endif %}
@@ -150,7 +144,9 @@ pipeline {
                       unstash "msi"
                       archiveArtifacts artifacts: "*.whl", fingerprint: true
                       archiveArtifacts artifacts: "*.tar.gz", fingerprint: true
+                      {%- if cookiecutter.create_standalone == "y" or cookiecutter.use_cx_freeze == "y" %}
                       archiveArtifacts artifacts: "*.msi", fingerprint: true
+                      {%- endif %}
                 }
               }
             }
@@ -219,7 +215,7 @@ pipeline {
             }
             post {
                 success {
-                    echo "it Worked. Pushing file to ${env.BRANCH_NAME} index"
+                    echo "It Worked. Pushing file to ${env.BRANCH_NAME} index"
                     script {
                         def name = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --name").trim()
                         def version = bat(returnStdout: true, script: "@${tool 'Python3.6.3_Win64'} setup.py --version").trim()
@@ -229,6 +225,31 @@ pipeline {
                             bat "${tool 'Python3.6.3_Win64'} -m devpi push ${name}==${version} ${DEVPI_USERNAME}/${env.BRANCH_NAME}"
                         }
 
+                    }
+                }
+            }
+        }
+        stage("Deploy to SCCM") {
+            when {
+                expression { params.RELEASE == "Release_to_devpi_and_sccm"}
+            }
+
+            steps {
+                node("Linux"){
+                    unstash "msi"
+                    deployStash("msi", "${env.SCCM_STAGING_FOLDER}/${params.PROJECT_NAME}/")
+                    input("Deploy to production?")
+                    deployStash("msi", "${env.SCCM_UPLOAD_FOLDER}")
+                }
+            }
+
+            post {
+                success {
+                    script{
+                        def  deployment_request = requestDeploy this, "deployment.yml"
+                        echo deployment_request
+                        writeFile file: "deployment_request.txt", text: deployment_request
+                        archiveArtifacts artifacts: "deployment_request.txt"
                     }
                 }
             }
@@ -245,7 +266,7 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'DS_devpi', usernameVariable: 'DEVPI_USERNAME', passwordVariable: 'DEVPI_PASSWORD')]) {
                         bat "${tool 'Python3.6.3_Win64'} -m devpi login ${DEVPI_USERNAME} --password ${DEVPI_PASSWORD}"
                         bat "${tool 'Python3.6.3_Win64'} -m devpi use /${DEVPI_USERNAME}/${env.BRANCH_NAME}_staging"
-                        bat "${tool 'Python3.6.3_Win64'} -m devpi push ${name}==${version} production/${params.RELEASE}"
+                        bat "${tool 'Python3.6.3_Win64'} -m devpi push ${name}==${version} production/release"
                     }
 
                 }
@@ -255,30 +276,7 @@ pipeline {
             }
         }
 
-        stage("Deploy to SCCM") {
-            when {
-                expression { params.RELEASE == "Release_to_devpi_and_sccm"}
-            }
-
-            steps {
-                node("Linux"){
-                    unstash "msi"
-                    deployStash("msi", "${env.SCCM_STAGING_FOLDER}/${params.PROJECT_NAME}/")
-                    input("Deploy to production?")
-                    deployStash("msi", "${env.SCCM_UPLOAD_FOLDER}")
-                }
-
-            post {
-                success {
-                    script{
-                        def  deployment_request = requestDeploy this, "deployment.yml"
-                        echo deployment_request
-                        writeFile file: "deployment_request.txt", text: deployment_request
-                        archiveArtifacts artifacts: "deployment_request.txt"
-                    }
-                }
-            }
-        }
+        
         {%- if cookiecutter.use_sphinx == "y" %}
         stage("Update online documentation") {
             agent {
@@ -290,9 +288,6 @@ pipeline {
 
             steps {
                 updateOnlineDocs url_subdomain: params.URL_SUBFOLDER, stash_name: "HTML Documentation"
-            }
-
-                }
             }
         }
         {%- endif %}
