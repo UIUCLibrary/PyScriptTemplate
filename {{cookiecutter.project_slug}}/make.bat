@@ -69,7 +69,7 @@ goto :eof
 :install-required-deps
     setlocal
     echo Installing runtime requirements
-    call venv\Scripts\activate.bat && pip install -r requirements.txt --upgrade-strategy only-if-needed
+    call venv\Scripts\pip.exe install -r requirements.txt --upgrade-strategy only-if-needed
     endlocal
 goto:eof
 ::=============================================================================
@@ -79,7 +79,8 @@ goto:eof
     call:venv
     setlocal
     echo Installing development requirements
-    call venv\Scripts\activate.bat && pip install -r requirements-dev.txt --upgrade-strategy only-if-needed
+    venv\Scripts\pip.exe install -r requirements.txt
+    venv\Scripts\pip.exe install -r requirements-dev.txt
     endlocal
 goto :eof
 
@@ -115,7 +116,7 @@ goto :eof
 :build
     call:install-dev
     setlocal
-    call venv\Scripts\activate.bat && python setup.py build
+    venv\Scripts\python.exe setup.py build
     endlocal
 goto :eof
 
@@ -125,7 +126,7 @@ goto :eof
 :wheel
     call:install-dev
     setlocal
-    call venv\Scripts\activate.bat && python setup.py bdist_wheel
+    venv\Scripts\python.exe setup.py bdist_wheel
     endlocal
 goto :eof
 
@@ -136,7 +137,7 @@ goto :eof
 :sdist
     call:install-dev
     setlocal
-    call venv\Scripts\activate.bat && python setup.py sdist
+    venv\Scripts\python.exe setup.py sdist
     endlocal
 goto :eof
 
@@ -148,10 +149,10 @@ goto :eof
 :freeze
     call:install-dev
     setlocal
-    call venv\Scripts\activate.bat
-    python -m pip install -r requirements-freeze.txt
-    python cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi
-    call build\\msi\\{{ cookiecutter.script["cli_command_name"] }}.exe --pytest
+    venv\Scripts\pip.exe install -r requirements.txt
+    venv\Scripts\pip.exe install -r requirements-dev.txt
+    venv\Scripts\pip.exe install -r requirements-freeze.txt
+    venv\Scripts\python.exe cx_setup.py bdist_msi --add-to-path=true -k --bdist-dir build/msi
     endlocal
 goto:eof
 {%- endif %}
@@ -177,7 +178,7 @@ goto:eof
 :test
     call:install-dev
     setlocal
-    call venv\Scripts\activate.bat && python setup.py test
+    venv\Scripts\python.exe setup.py test
     endlocal
 goto :eof
 
@@ -188,7 +189,7 @@ goto :eof
 :mypy
     call:install-dev
     setlocal
-    call venv\Scripts\activate.bat && mypy -p {{ cookiecutter.project_slug }} %*
+    venv\Scripts\mypy.exe -p {{ cookiecutter.project_slug }} %*
     endlocal
 goto :eof
 
@@ -200,7 +201,7 @@ goto :eof
     call:install-dev
     echo Creating docs
     setlocal
-    call venv\Scripts\activate.bat && python setup.py build_sphinx %*
+    venv\Scripts\python.exe setup.py build_sphinx %*
     endlocal
 goto :eof
 {%- endif %}
@@ -210,15 +211,13 @@ goto :eof
 ::=============================================================================
 :clean
     setlocal
-	call venv\Scripts\activate.bat
-
 {%- if cookiecutter.use_cx_freeze == "y" %}
 	echo Calling cx_setup.py clean
-	python cx_setup.py clean --all --quiet
+	call venv\Scripts\python.exe cx_setup.py clean --all --quiet
 
 {%- endif %}
 	echo Calling setup.py clean
-	python setup.py clean --all --quiet
+	venv\Scripts\python.exe setup.py clean --all --quiet
 
 {%- if cookiecutter.create_standalone== "y" %}
     call windows_build/clean_release.bat
