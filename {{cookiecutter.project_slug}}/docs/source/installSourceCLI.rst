@@ -15,4 +15,4 @@ Installation from the Command Line From Source
 
         py -3 setup.py install
 
-All finished! {{ cookiecutter.project_name }} should now be installed.
+All finished! {{cookiecutter.project_name}} should now be installed.
