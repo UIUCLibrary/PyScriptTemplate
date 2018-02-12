@@ -27,7 +27,9 @@ pipeline {
                 deleteDir()
                 checkout scm
                 stash includes: '**', name: "Source", useDefaultExcludes: false
+                {%- if cookiecutter.create_deployment_yml == "y" %}
                 stash includes: 'deployment.yml', name: "Deployment"
+                {%- endif %}
             }
 
         }
@@ -41,7 +43,7 @@ pipeline {
             steps {
                 node(label: "Windows") {
                             checkout scm
-                            bat "${tool 'Python3.6.3_Win64'} -m tox -e pytest -- --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov=MedusaPackager" //  --basetemp={envtmpdir}" 
+                            bat "${tool 'Python3.6.3_Win64'} -m tox -e pytest -- --junitxml=reports/junit-${env.NODE_NAME}-pytest.xml --junit-prefix=${env.NODE_NAME}-pytest --cov-report html:reports/coverage/ --cov={{cookiecutter.project_slug}}" //  --basetemp={envtmpdir}"
                             junit "reports/junit-${env.NODE_NAME}-pytest.xml"
                             publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/coverage', reportFiles: 'index.html', reportName: 'Coverage', reportTitles: ''])
                          }
@@ -56,14 +58,23 @@ pipeline {
             steps {
                 parallel(
                         {%- if cookiecutter.use_sphinx == "y" %}
-                        "Documentation": {
+                                                "Documentation": {
                             node(label: "Windows") {
                                 checkout scm
-                                bat "${tool 'Python3.6.3_Win64'} -m tox -e docs -- -W -b html -d {envtmpdir}/doctrees docs/source  {distdir}/html"
-                                dir('.tox/dist') {
-                                    zip archive: true, dir: 'html', glob: '', zipFile: 'sphinx_html_docs.zip'
-                                    dir("html"){
-                                        stash includes: '**', name: "HTML Documentation"
+                                bat "${tool 'Python3.6.3_Win64'} -m tox -e docs"
+                                script{
+                                    // Multibranch jobs add the slash and add the branch to the job name. I need only the job name
+                                    def alljob = env.JOB_NAME.tokenize("/") as String[]
+                                    def project_name = alljob[0]
+                                    dir('.tox/dist') {
+                                        zip archive: true, dir: 'html', glob: '', zipFile: "${project_name}-${env.BRANCH_NAME}-docs-html-${env.GIT_COMMIT.substring(0,6)}.zip"
+                                        dir("html"){
+                                            stash includes: '**', name: "HTML Documentation"
+                                        }
+                                        dir("doctest"){
+                                            bat "copy output.txt sphinx-doctest-results-${env.GIT_COMMIT.substring(0,6)}.txt"
+                                            archiveArtifacts artifacts: "sphinx-doctest-results-${env.GIT_COMMIT.substring(0,6)}.txt", allowEmptyArchive: true
+                                        }
                                     }
                                 }
                                 publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: '.tox/dist/html', reportFiles: 'index.html', reportName: 'Documentation', reportTitles: ''])
@@ -75,21 +86,13 @@ pipeline {
                         node(label: "Windows") {
                             checkout scm
                             bat "call make.bat install-dev"
-                            bat "venv\\Scripts\\mypy.exe -p MedusaPackager --junit-xml=junit-${env.NODE_NAME}-mypy.xml --html-report reports/mypy_html"
-                            // bat "${tool 'Python3.6.3_Win64'} -m mypy -p MedusaPackager --junit-xml=junit-${env.NODE_NAME}-mypy.xml --html-report reports/mypy_html"
+                            bat "venv\\Scripts\\mypy.exe -p {{cookiecutter.project_slug}} --junit-xml=junit-${env.NODE_NAME}-mypy.xml --html-report reports/mypy_html"
                             junit "junit-${env.NODE_NAME}-mypy.xml"
                             publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'reports/mypy_html', reportFiles: 'index.html', reportName: 'MyPy', reportTitles: ''])
                          }
                     },
                 )
             }
-            {%- if cookiecutter.use_sphinx == "y" %}
-            post {
-              success {
-                  zip archive: true, dir: 'html', glob: '', zipFile: 'sphinx_html_docs.zip'
-              }
-            }
-            {%- endif %}
         }
         {%- endif %}
         stage("Packaging") {
