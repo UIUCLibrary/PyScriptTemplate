@@ -7,9 +7,9 @@ REM Command file for Sphinx documentation
 if "%SPHINXBUILD%" == "" (
 	set SPHINXBUILD=sphinx-build
 )
-set SOURCEDIR=source
-set BUILDDIR=build
-set SPHINXPROJ=project
+set SOURCEDIR={{ rsrcdir }}
+set BUILDDIR={{ rbuilddir }}
+set SPHINXPROJ={{ project_fn }}
 
 if "%1" == "" goto help
 
@@ -34,3 +34,4 @@ goto end
 
 :end
 popd
+
