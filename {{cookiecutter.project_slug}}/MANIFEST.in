@@ -12,9 +12,6 @@ include requirements.txt
 # Development requirements
 include requirements-dev.txt
 
-# Mypy settings
-include mypy.ini
-
 # Build scripts
 include Makefile
 include make.bat
@@ -26,8 +23,7 @@ include tox.ini
 {%- endif %}
 {%- if cookiecutter.use_pytest == "y" %}
 
-# Pytest configuration setting
-include pytest.ini
+# Pytest tests
 recursive-include tests *.py
 {%- endif %}
 {%- if cookiecutter.use_sphinx == "y" %}
