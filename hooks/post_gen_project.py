@@ -1,9 +1,49 @@
+import contextlib
 import os
 import shutil
 import uuid
+import sys
+import io
 from cookiecutter.main import cookiecutter
+import sphinx.quickstart
 
 PROJECT_DIRECTORY = os.path.realpath(os.path.curdir)
+
+SPHINX_SUFFIX = ".rst"
+SPHINX_MASTER = "index"
+
+
+def generate_docs():
+    _run_sphinx_quickstart()
+
+
+def _run_sphinx_quickstart():
+    f = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(sys.stderr):
+            sphinx.quickstart.main(argv=[
+                "",
+                "--sep",
+                "--dot=_",
+                f'--project={{ cookiecutter.project_slug }}',
+                f"--author={{ cookiecutter.author }}",
+                f"-v={{ cookiecutter.version }}",
+                f"--release={{ cookiecutter.version }}',",
+                "--language=en",
+                f"--suffix={SPHINX_SUFFIX}",
+                f"--master={SPHINX_MASTER}",
+                "--epub",
+                "--ext-autodoc",
+                "--ext-doctest",
+                "--ext-githubpages",
+                '--templatedir=quickstart',
+                "-q",
+                "docs",
+
+            ])
+    except Exception:
+        print(f.getvalue())
+        raise
 
 
 def remove_file(filepath):
@@ -11,7 +51,7 @@ def remove_file(filepath):
 
 
 def remove_dir(dirpath):
-    file =os.path.join(PROJECT_DIRECTORY, dirpath)
+    file = os.path.join(PROJECT_DIRECTORY, dirpath)
     print(file)
     shutil.rmtree(file)
 
@@ -35,7 +75,7 @@ def build_standalone():
         extra_context={
             "project_name": "{{ cookiecutter.project_name }}",
             "project_slug": "{{ cookiecutter.project_slug }}",
-            "include_docs":"y",
+            "include_docs": "y",
             "description": "{{ cookiecutter.description }}",
             "license_file": "LICENSE",
             "module_name": '{{ cookiecutter.project_slug }}',
@@ -56,8 +96,9 @@ if __name__ == "__main__":
     if '{{ cookiecutter.use_tox }}' != "y":
         remove_file("tox.ini")
 
-    if '{{ cookiecutter.use_sphinx}}' != "y":
-        remove_dir("docs")
+    if '{{ cookiecutter.use_sphinx}}' == "y":
+        # remove_dir("docs")
+        generate_docs()
 
     if '{{ cookiecutter.use_travis_ci}}' != "y":
         remove_file(".travis.yml")
@@ -76,6 +117,8 @@ if __name__ == "__main__":
         build_guid()
     else:
         remove_file("cx_setup.py")
+        remove_file("documentation.url")
+        remove_file("requirements-freeze.txt")
 
     if "{{ cookiecutter.create_standalone }}".lower() == "y":
         build_standalone()
