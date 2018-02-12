@@ -2,7 +2,7 @@ User's Guide
 ------------
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
     about
     installation
@@ -12,10 +12,5 @@ User's Guide
 API Reference
 -------------
 
-This part of the documentation is not for the normal users. Instead, it is mainly for anybody maintaining the code or
-expanding on it.
-
 .. toctree::
     :maxdepth: 1
-
-    {{cookiecutter.project_slug}}
