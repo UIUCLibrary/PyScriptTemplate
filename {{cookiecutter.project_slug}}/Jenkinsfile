@@ -6,6 +6,9 @@ pipeline {
     agent {
         label "Windows&&DevPi"
     }
+    options {
+        disableConcurrentBuilds()  //each branch has 1 job running at a time
+    }
     parameters {
         string(name: "PROJECT_NAME", defaultValue: "{{cookiecutter.project_name}}", description: "Name given to the project")
         {%- if cookiecutter.use_pytest == "y" %}
